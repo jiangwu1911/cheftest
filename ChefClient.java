@@ -1,12 +1,16 @@
 import java.io.*;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 
 import org.jclouds.chef.ChefApi;
 import org.jclouds.ContextBuilder;
 import org.jclouds.chef.ChefContext;
 import org.jclouds.chef.domain.Node;
 import org.jclouds.chef.util.RunListBuilder;
+import org.jclouds.chef.domain.Environment;
+import org.jclouds.chef.domain.Environment.Builder;
+import org.jclouds.domain.JsonBall;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -44,11 +48,16 @@ public class ChefClient {
         this.context.close();
     }
 
-    public void runTest() {
-	    Set<String> databags = this.api.listDatabags();
+    public void createEnvironment() throws IOException {
+        String name = "env02";
+        String description = "My test environment 02";
+        api.createEnvironment(Environment.builder().name(name)
+                                .description(description)
+                                .attribute("nginx", new JsonBall("{\"worker_connections\":512}"))
+                                .build()); 
+    } 
 
-	    String nodeName = "192.168.206.142";
-	    List<String> runlist = new RunListBuilder().addRecipe("nginx").build();
-	    Node node = this.context.getChefService().createNodeAndPopulateAutomaticAttributes(nodeName, runlist);
+    public void runTest() throws IOException {
+        createEnvironment();
     }
 }
