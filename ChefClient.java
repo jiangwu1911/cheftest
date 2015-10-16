@@ -12,38 +12,43 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
 public class ChefClient {
+    String user = "wujiang";
+    String organization = "mycorp";
+    String pemFile = System.getProperty("user.home") + "/.chef/" + user + ".pem";
+    String serverUrl = "https://chefserver";
+    ChefContext context;
+    ChefApi api;
+
     public static void main(String argv[]) {
-    	ChefClient client = new ChefClient();
+    	ChefClient cli = new ChefClient();
         try {
-			client.runTest();
+            cli.connect();
+			cli.runTest();
+            cli.disconnect();
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
     }
 
-    public void runTest() throws IOException {
-        String client = "wujiang";
-	String organization = "mycorp";
-	String pemFile = System.getProperty("user.home") + "/.chef/" + client + ".pem";
-	String credential = Files.toString(new File(pemFile), Charsets.UTF_8);
+    public void connect() throws IOException {
+	    String credential = Files.toString(new File(pemFile), Charsets.UTF_8);
+	    this.context = ContextBuilder.newBuilder("chef")
+    				        .endpoint(serverUrl + "/organizations/" + organization)
+    				        .credentials(user, credential)
+    				        .buildView(ChefContext.class);
+	    this.api = context.unwrapApi(ChefApi.class);
+    }
 
-	ChefContext context = ContextBuilder.newBuilder("chef")
-    				.endpoint("https://chefserver/organizations/" + organization)
-    				.credentials(client, credential)
-    				.buildView(ChefContext.class);
+    public void disconnect() throws IOException {
+        this.context.close();
+    }
 
-	// The raw API has access to all chef features, as exposed in the Chef REST API
-	ChefApi api = context.unwrapApi(ChefApi.class);
-	Set<String> databags = api.listDatabags();
+    public void runTest() {
+	    Set<String> databags = this.api.listDatabags();
 
-	// ChefService has helpers for common commands
-	String nodeName = "192.168.206.142";
-	List<String> runlist = new RunListBuilder().addRecipe("nginx").build();
-	Node node = context.getChefService().createNodeAndPopulateAutomaticAttributes(nodeName, runlist);
-	
-	// Release resources
-	context.close();
+	    String nodeName = "192.168.206.142";
+	    List<String> runlist = new RunListBuilder().addRecipe("nginx").build();
+	    Node node = this.context.getChefService().createNodeAndPopulateAutomaticAttributes(nodeName, runlist);
     }
 }
-
